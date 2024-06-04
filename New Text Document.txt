@@ -1,0 +1,53 @@
+clear all
+close all
+clc
+
+% EEG set up specifications
+EEG.srate = 256;
+EEG.time  = -1:1/EEG.srate:2;
+EEG.pnts  = length(EEG.time);
+
+% Signal specifications
+freqs     = [ 3   10   5   15   35 ];
+amps      = [ 5   15   10   5   7 ];
+phases    = [  pi/7  pi/8  pi  pi/2  -pi/4 ];
+
+%The signal
+signal    = 0;
+for i= 1:length(freqs)
+    signal = signal + amps(i) * sin(freqs(i) * 2 * pi * EEG.time + phases(i));
+end
+
+% Noise specifications
+ed        = 50;                                                                        % exponential decay parameter
+as        = rand(1,floor(EEG.pnts/2)-1) .* exp(-(1:floor(EEG.pnts/2)-1)/ed);           % Amplitude Spectrum
+as        = [as(1) as 0 0 as(:,end:-1:1)];                                             % We mirror the as so it includes the negative Freqs too
+fc        = as .* exp(1i*2*pi*rand(size(as)));                                         % Fourier coefficients
+noise     = 3 * real(ifft(fc)) * EEG.pnts;
+hz        = linspace(0,EEG.srate/2,floor(length(EEG.time)/2)+1);
+
+Signal    = signal + noise;
+
+figure()%, clf
+subplot(211)
+plot(EEG.time,Signal,'k')
+set(gca,'fontsize',15)
+title('Signal: Time domain')
+xlabel('Time (s)'), ylabel('Amplitude')
+
+subplot(223)
+[y,x]     = hist(Signal,100);
+plot(x,y,'k','linew',2)
+xlabel('Values'), ylabel('N per bin')
+title('Signal histogram (distribution)')
+set(gca,'fontsize',15)
+
+subplot(224)
+amp       = abs(fft(Signal)/EEG.pnts);
+amp(2:end)= 2*amp(2:end);                                                              % The purpose of this line and the previous line is to include all the negative frequencies without doubeling the 0 frequency 
+plot(hz, amp(1:length(hz)),'k')
+title('Frequency domain')
+set(gca,'fontsize',15)
+xlabel('Frequency (Hz)'), ylabel('Amplitude')
+
+
